@@ -1,0 +1,78 @@
+import socket
+import ssl
+import threading
+from h2.connection import H2Connection
+from h2.events import ResponseReceived, DataReceived, SettingsAcknowledged
+
+
+def http2_test_client(hostname, port=443):
+    try:
+        # Set up SSL context (allows self-signed certs)
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        context.set_alpn_protocols(["h2"])
+
+        # Connect and wrap socket with SSL
+        raw_sock = socket.create_connection((hostname, port))
+        tls_sock = context.wrap_socket(raw_sock, server_hostname=hostname)
+
+        if tls_sock.selected_alpn_protocol() != "h2":
+            print(f"[!] HTTP/2 not negotiated. Got: {tls_sock.selected_alpn_protocol()}")
+            return
+
+        print("[*] Connected to", hostname, "using HTTP/2")
+
+        conn = H2Connection()
+        conn.initiate_connection()
+        tls_sock.sendall(conn.data_to_send())
+
+        # Receive server's SETTINGS and ACK
+        data = tls_sock.recv(65535)
+        events = conn.receive_data(data)
+        for event in events:
+            if isinstance(event, SettingsAcknowledged):
+                print("[*] HTTP/2 settings acknowledged")
+
+        # Send a GET request
+        stream_id = conn.get_next_available_stream_id()
+        conn.send_headers(
+            stream_id,
+            [
+                (':method', 'GET'),
+                (':path', '/'),
+                (':scheme', 'https'),
+                (':authority', hostname),
+            ],
+            end_stream=True
+        )
+        tls_sock.sendall(conn.data_to_send())
+
+        # Read the response
+        while True:
+            data = tls_sock.recv(65535)
+            if not data:
+                break
+            events = conn.receive_data(data)
+            for event in events:
+                if isinstance(event, ResponseReceived):
+                    print("[*] Headers:")
+                    for name, value in event.headers:
+                        print(f"  {name}: {value}")
+                elif isinstance(event, DataReceived):
+                    print("[*] Body (truncated):", event.data[:100])
+                    conn.acknowledge_received_data(event.flow_controlled_length, stream_id)
+            tls_sock.sendall(conn.data_to_send())
+
+    except Exception as e:
+        print(f"[!] Error: {e}")
+    finally:
+        try:
+            tls_sock.close()
+        except:
+            pass
+
+
+# Use your real domain or IP here
+target_host = "192.168.100.102"
+http2_test_client(target_host)
